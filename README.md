@@ -1,87 +1,128 @@
-# VIO ROS2 Wrapper
+# Lightweight VIO ROS2 Wrapper
 
-ROS2 wrapper for the [lightweight VIO](lightweight_vio/) system.
+ROS2 wrapper for lightweight Visual-Inertial Odometry system.
 
-## Features
+Supports **Stereo VIO/VO** and **RGBD VIO/VO** modes.
 
-- ✅ Stereo camera image synchronization
-- ✅ IMU data subscription
-- ✅ Time-synchronized sensor fusion ready
-- ✅ Configurable topic names via parameters
-- ✅ EuRoC dataset compatible
+---
 
-## Dependencies
+## Requirements
 
-- ROS2 (tested on Galactic)
-- OpenCV
-- Eigen3
-- cv_bridge
-- message_filters
+- Ubuntu 22.04
+- ROS2 Humble
 
-## Building
+---
+
+## Installation
+
+### 1. Create Workspace
 
 ```bash
-# Navigate to your workspace
-cd /home/eugene/real_source/vio_ws
+mkdir -p <your_path>/vio_ws/src
+cd <your_path>/vio_ws/src
+git clone https://github.com/93won/vio_ros_wrapper.git
+cd vio_ros_wrapper
+git submodule update --init --recursive
+cd <your_path>/vio_ws
+```
 
-# Build the package
-colcon build --packages-select vio_ros_wrapper
+### 2. Build
 
-# Source the workspace
+```bash
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
 source install/setup.bash
 ```
 
-## Running
+---
 
-### With EuRoC Dataset
+## Sample Datasets
+
+Pre-recorded ROS2 bags for testing:
+
+### 1. OpenLORIS RGBD Dataset (Cafe)
+- **File**: `cafe.bag.db3`
+- **Description**: Indoor cafe scene with RealSense D435i
+- **Topics**: RGB + Depth images
+- **Download**: [Google Drive](https://drive.google.com/file/d/1hH-n9-Movdq4sZkGATvNCcl27lDOYep5/view?usp=sharing)
+
+### 2. TUM-VI Dataset (Room1)
+- **File**: `room1_stereo_imu.bag_0.db3`
+- **Description**: Indoor room with fisheye stereo camera + IMU
+- **Topics**: Stereo images + IMU data
+- **Download**: [Google Drive](https://drive.google.com/file/d/1-_y33_YkB8pTDkro3VZaTcIBFieqORVa/view?usp=sharing)
+
+### 3. EuRoC Dataset (V101 Easy)
+- **File**: `v101_stereo_imu.bag.db3`
+- **Description**: Vicon room, easy trajectory
+- **Topics**: Rectilinear Stereo images + IMU data
+- **Download**: [Google Drive](https://drive.google.com/file/d/1gthuWv-eLEPY3N6G4SFUWppHvh0sTWZo/view?usp=sharing)
+
+---
+
+## Quick Start
+
+### RGBD Visual Odometry (OpenLORIS Cafe Dataset)
 
 ```bash
-# Terminal 1: Launch VIO node
-ros2 launch vio_ros_wrapper euroc.launch.py
+# Terminal 1
+ros2 launch vio_ros_wrapper rgbd_vo.launch.py
 
-# Terminal 2: Play rosbag
-ros2 bag play room3_stereo_imu_raw.bag
+# Terminal 2
+ros2 bag play cafe.bag.db3 --clock
 ```
 
-### With Custom Topics
+### Stereo VIO (TUM-VI Room1)
 
 ```bash
-# Launch with default topics
-ros2 launch vio_ros_wrapper vio.launch.py
-
-# Launch with custom topics
+# Terminal 1 (in <your_path>/vio_ws)
 ros2 launch vio_ros_wrapper vio.launch.py \
-    left_image_topic:=/my_camera/left/image \
-    right_image_topic:=/my_camera/right/image \
-    imu_topic:=/my_imu/data
+    config_file:=<your_path>/vio_ws/src/vio_ros_wrapper/lightweight_vio/config/tum_vio.yaml
+
+# Terminal 2
+ros2 bag play room1_stereo_imu.bag_0.db3 --clock
 ```
 
-## Topic Subscriptions
+### Stereo VIO (EuRoC V101)
 
-### EuRoC Dataset (euroc.launch.py)
-- `/cam0/image_raw` (sensor_msgs/Image) - Left camera image
-- `/cam1/image_raw` (sensor_msgs/Image) - Right camera image  
-- `/imu0` (sensor_msgs/Imu) - IMU measurements
+```bash
+# Terminal 1 (in <your_path>/vio_ws)
+ros2 launch vio_ros_wrapper vio.launch.py \
+    config_file:=<your_path>/vio_ws/src/vio_ros_wrapper/lightweight_vio/config/euroc_vio.yaml
 
-### Default (vio.launch.py)
-- `/camera/left/image_raw` (sensor_msgs/Image) - Left camera image
-- `/camera/right/image_raw` (sensor_msgs/Image) - Right camera image  
-- `/imu/data` (sensor_msgs/Imu) - IMU measurements
+# Terminal 2
+ros2 bag play v101_stereo_imu.bag.db3 --clock
+```
 
-## Parameters
+---
 
-- `left_image_topic` (string) - Left camera topic name
-- `right_image_topic` (string) - Right camera topic name
-- `imu_topic` (string) - IMU topic name
-- `queue_size` (int, default: 10) - Subscriber queue size
+## Configuration
 
-## TODO
+Config files: `lightweight_vio/config/`
 
-- [ ] Integrate lightweight_vio estimator
-- [ ] Publish odometry output (nav_msgs/Odometry)
-- [ ] Add TF broadcaster
-- [ ] Add visualization markers
-- [ ] Add configuration for VIO parameters
+- `euroc_vio.yaml` - EuRoC stereo + IMU
+- `d435i_cafe.yaml` - RealSense RGBD
+- `tum_vio.yaml` - TUM-VI stereo + IMU
+
+---
+
+## Topics
+
+### Published
+- `/vio/odometry` - 6-DOF pose
+- `/vio/trajectory` - Path history
+- `/vio/tracking_image` - Feature visualization
+- `/vio/depth_image` - Depth heatmap (RGBD only)
+
+### Subscribed (Stereo)
+- `/cam0/image_raw` - Left camera
+- `/cam1/image_raw` - Right camera
+- `/imu0` - IMU data
+
+### Subscribed (RGBD)
+- `/camera/rgb/image_raw` - RGB image
+- `/camera/depth/image_raw` - Depth image
+
+---
 
 ## License
 
